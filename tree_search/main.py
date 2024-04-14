@@ -2,8 +2,7 @@ import sys
 from random import choice
 from time import time
 from math import log, sqrt
-
-import numpy as np
+import logging
 
 sys.path.append('..')
 
@@ -12,6 +11,9 @@ from game.enums import Direction, TurnMove
 from game.state import State
 
 from tree import Node
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(filename='collect.log', level=logging.DEBUG)
 
 
 def uct_score(wins, total, current, temperature):
@@ -37,7 +39,7 @@ class MonteCarloAgent:
                 state = state.spawn()
 
         if state.is_win():
-            print('Win!!')
+            logger.debug('Win!!')
 
         return state.is_win()
                 
@@ -54,7 +56,7 @@ class MonteCarloAgent:
             if score > max_score:
                 max_score = score
                 best = child
-    
+
         return best
             
     
@@ -91,14 +93,14 @@ class MonteCarloAgent:
         
         return best
         
-def collect_data(agent, collector):
+def collect_data(agent, collector, max_moves=1500):
 
     start = time()
     state = State().spawn()
     collector.begin_record()
 
     count = 1
-    while state.can_play():
+    while count < max_moves and state.can_play():
 
         if state.can_play():
             move = agent.select_move(state)
@@ -115,20 +117,30 @@ def collect_data(agent, collector):
     end = time()
 
     collector.stop_record(1 if state.is_win() else -1)
-    collector.serialize('data.h5')
+    
+    logger.debug(f"Win: {state.is_win()}")
+    logger.debug(state.grid)
 
-    print("Win: ", state.is_win())
-    print(state.grid)
-
-    print((end - start) / 60, 'mins')
+    logger.debug(f"{(end - start) / 60} mins")
 
 
 if __name__ == '__main__':
-    agent = MonteCarloAgent(1.5)
+    agent = MonteCarloAgent(3)
     collector = Collector()
 
-    for i in range(1):
-        print(f'====epoch #{i+1}====\n\n')
+    collector_epoch = 0
 
-        collect_data(agent, collector)
+    for i in range(5):  
+        logger.info(f'starting epoch #{i}')
+
+        collect_data(agent, collector, 5)
+        collector.serialize(f'./data/games_{collector_epoch}.h5')
+
+        if len(collector) >= 10:
+            collector_epoch += 1
+            del collector 
+            collector = Collector()
+
+        
+
     
