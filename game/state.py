@@ -1,7 +1,9 @@
+import numpy as np
 from copy import deepcopy
 from game.grid import Grid
 from game.enums import Direction, TurnMove
 
+from random import choice
 
 WIDTH = 5
 
@@ -12,14 +14,22 @@ class State:
             self.grid = Grid(5, 5)
 
         self.move = move
-        self.play = self.grid.can_play()
+        self._play = self.grid.can_play()
+        self._valid_game_moves = np.argwhere(self.grid._grid == 0)
 
-    def spawn(self):
+    def random_spawn(self):
+        if not self.can_play():
+            raise Exception('game is over')
+
+        x, y = choice(self.get_valid_game_moves())
+        return self.spawn(x, y)
+
+    def spawn(self, x, y):
         if not self.can_play():
             raise Exception('game is over')
 
         new_grid = deepcopy(self.grid)
-        new_grid.spawn()
+        new_grid.spawn(x, y)
 
         return State(new_grid, move=TurnMove.Player)
         
@@ -43,24 +53,29 @@ class State:
 
         return State(new_grid, move=TurnMove.Game)
 
-    def can_play(self):
-        return self.play
-    
-    def is_win(self):
-        return self.grid.is_win()
-    
     def to_numpy(self):
         return self.grid._grid
     
-    def valid_moves(self):
+    def get_valid_moves(self):
         moves = []
 
         for i in range(4):
             if Grid.correct_move(self.grid, self.apply_move(Direction(i)).grid):
                 moves.append(i)
 
-        return moves        
+        return moves
+    
+    def get_valid_game_moves(self):
+        return self._valid_game_moves
+    
+    def can_play(self):
+        return self._play
+    
+    def is_win(self):
+        return self.grid.is_win()
+                         
 
+# deprecated
 class Game(object):
     def __init__(self, state=None):
         

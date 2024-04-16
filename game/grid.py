@@ -62,15 +62,11 @@ class Grid(object):
         self.move_right()
         self._grid = self._grid.T
     
-    def spawn(self):
-        m = np.random.randint(size=1, high=self.weight, low=0)
-        n = np.random.randint(size=1, high=self.height, low=0)
-
-        while(self._grid[m, n] != 0): 
-            m = np.random.randint(size=1, high=self.weight, low=0)
-            n = np.random.randint(size=1, high=self.height, low=0)
+    def spawn(self, x, y):
+        if self._grid[x, y] != 0:
+            raise Exception('trying to spawn in not empty cell')
         
-        self._grid[m, n] = 2
+        self._grid[x, y] = 2
     
     def is_lose(self) -> bool:        
         copy = np.copy(self._grid)
@@ -95,7 +91,7 @@ class Grid(object):
         return np.sum(self._grid == 0) > 0
     
     def __repr__(self) -> str:
-        return self._grid.__repr__()
+        return str(self._grid.astype(np.int32))
 
 
 

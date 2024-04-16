@@ -35,6 +35,9 @@ class Collector:
         self.cur_states = []
         self.cur_actions = []
 
+    def __len__(self):
+        return len(self.states)
+
     def begin_record(self):
         self.cur_states = []
         self.cur_actions = []
