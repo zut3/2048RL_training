@@ -1,10 +1,11 @@
-import ray
-
-ray.init()
+import numpy as np
 
 from random import choice
 from time import time
 from math import log, sqrt
+
+import sys
+import traceback
 import logging
 
 from game.Memory import Collector
@@ -13,9 +14,27 @@ from game.state import State
 
 from tree import Node
 
-logger = logging.getLogger(__name__)
 logging.basicConfig(filename='collect.log', level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+
+formatter = logging.Formatter("%(asctime)s;%(levelname)s;%(message)s",
+                              "%Y-%m-%d %H:%M:%S")
+ch.setFormatter(formatter)
+logger.addHandler(ch)
+
+def exp_handler(t, value, tb):
+    logger.exception("Get exception: {0}".format(str(value)))
+    
+    all_tb = "\n"
+    for e in traceback.format_tb(tb):
+        all_tb += e
+
+    logger.info(all_tb)
+
+sys.excepthook = exp_handler
 
 def uct_score(wins, total, current, temperature):
     exploration = sqrt(log(total) / current)
@@ -68,26 +87,14 @@ class MonteCarloAgent:
 
         root = Node(None, state)
 
-        @ray.remote
-        def _proccess(node):
-            reward = self.simulate_game(node)
-    
-            return reward
-
         st = time()
-
-        root.add_all_childs()
-        
-        idxs = []
-        for ch in root.childs:
-            idxs.append(_proccess.remote(ch))
     
-        rewards = ray.get(idxs)
-        #print(rewards)
-
-        for ch, r in zip(root.childs, rewards):
-            ch.record(r)
-            root.record(r)
+        while root.can_add_child():
+            ch = root.add_random_child()
+            reward = self.simulate_game(ch)
+            
+            ch.record(reward)
+            root.record(reward)
 
         print('All moves computation(mins) ', (time() - st) / 60)
 
@@ -143,7 +150,7 @@ def collect_data(agent, collector, max_moves=1e9):
     count = 0
 
     while state.can_play() and count < max_moves:
-
+            
         if state.can_play():
             move = agent.select_move(state)
 
@@ -155,7 +162,7 @@ def collect_data(agent, collector, max_moves=1e9):
             state = state.random_spawn()        
 
         count += 1
-        print(count)
+        logger.info(f'move #{count}')
 
     end = time()
 
@@ -178,9 +185,7 @@ if __name__ == '__main__':
 
         collect_data(agent, collector)
         
-        collector.serialize(f'./data/games_{collector_epoch}.h5')
+        collector.serialize(f'./data/games_{i}.h5')
 
-        if len(collector) >= 10:
-            collector_epoch += 1
-            del collector 
-            collector = Collector()
+        del collector 
+        collector = Collector()
