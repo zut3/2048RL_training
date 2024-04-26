@@ -11,11 +11,16 @@ class State:
     def __init__(self, grid=None, move=TurnMove.Game) -> None:
         self.grid = grid
         if grid is None:
-            self.grid = Grid(5, 5)
+            self.grid = Grid(WIDTH, WIDTH)
 
         self.move = move
         self._play = self.grid.can_play()
-        self._valid_game_moves = np.argwhere(self.grid._grid == 0)
+
+        self._valid_game_moves = []
+
+        if self.can_play():
+            self._valid_game_moves = np.argwhere(self.grid._grid == 1)
+            
 
     def random_spawn(self):
         if not self.can_play():
@@ -57,10 +62,15 @@ class State:
         return self.grid._grid
     
     def get_valid_moves(self):
+        if not self.can_play():
+            return []
+        
         moves = []
 
         for i in range(4):
-            if Grid.correct_move(self.grid, self.apply_move(Direction(i)).grid):
+            s = self.apply_move(Direction(i))
+            
+            if Grid.correct_move(self.grid, s.grid):
                 moves.append(i)
 
         return moves
@@ -74,52 +84,12 @@ class State:
     def is_win(self):
         return self.grid.is_win()
                          
+def get_reward(state: State):
+    if not state.can_play() and state.is_win():
+        return 6e3
 
-# deprecated
-class Game(object):
-    def __init__(self, state=None):
-        
-        if state is None:
-            self.grid = Grid(WIDTH, WIDTH)
-            self.grid.spawn()
-        else:
-            self.grid = state
+    maxi = np.max(state.to_numpy())
+    reward = maxi * np.sum(state.to_numpy() == maxi)
+    reward /= np.var(state.to_numpy() != 1)
 
-
-    def get_state(self):
-        return self.grid._grid.copy()
-    
-    def get_score(self):
-        return self.grid.score
-    
-    def is_win(self):
-        return self.grid.is_win()
-
-    def can_play(self):
-        return self.grid.can_play()
-    
-    def corect_last_move(self):
-        return self.grid.corect
-    
-    def spawn(self, x=None, y=None):
-        if (x is None) and (y is None):
-            self.grid.spawn()
-        else:
-            assert self.grid._grid[x, y] != 0
-            self.grid._grid[x, y] = 2
-
-    def act(self, dir: Direction, spawn=True):
-        if not self.can_play():
-            return
-
-        if dir == Direction.up:
-            self.grid.move_up()
-        elif dir == Direction.down:
-            self.grid.move_down()
-        elif dir == Direction.left:
-            self.grid.move_left()
-        elif dir == Direction.right:
-            self.grid.move_right()
-
-        if self.grid.have_empty() and spawn:
-            self.spawn()
+    return reward

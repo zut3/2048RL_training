@@ -34,27 +34,45 @@ class Collector:
 
         self.cur_states = []
         self.cur_actions = []
-
+        self.cur_rewards = []
+    
     def __len__(self):
         return len(self.states)
-
+    
     def begin_record(self):
         self.cur_states = []
         self.cur_actions = []
-
-    def add(self, state, action):
+        self.cur_rewards = []
+    
+    def add(self, state, action, reward=None):
         self.cur_states.append(state)
-        self.cur_actions.append(action)        
+        self.cur_actions.append(action) 
+        if reward is not None:
+            self.cur_rewards.append(reward)
 
-    def stop_record(self, reward):
-        
+    def stop_record(self, reward=None):
         self.states += self.cur_states
         self.actions += self.cur_actions
 
-        self.rewards += [reward for _ in range(len(self.cur_actions))]
+        if reward is None:
+            self.rewards += self.cur_rewards
+        else:
+            self.rewards += [reward for _ in self.cur_actions]
 
-        self.cur_actions = []
-        self.cur_states = []
+    def topk(self, k=100):       
+        zipped = list(zip(self.states, self.actions, self.rewards))
+        
+        def _f(x):
+            _, _, r = x
+            return r
+
+        res = sorted(zipped, key=_f, reverse=True)[:k]
+        
+        states = [z[0] for z in res]
+        actions = [z[1] for z in res]
+        rewards = [z[1] for z in res]
+
+        return states, actions, rewards
 
 
     @staticmethod

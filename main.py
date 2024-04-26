@@ -48,7 +48,7 @@ class MonteCarloAgent:
     def simulate_game(self, node: Node):
         state = node.state
         
-        if state.move == TurnMove.Game:
+        if state.move == TurnMove.Game and state.can_play():
             state = state.random_spawn()
 
         while state.can_play():
@@ -86,17 +86,13 @@ class MonteCarloAgent:
             raise Exception('game is over')
 
         root = Node(None, state)
-
-        st = time()
-    
+   
         while root.can_add_child():
             ch = root.add_random_child()
             reward = self.simulate_game(ch)
             
             ch.record(reward)
             root.record(reward)
-
-        print('All moves computation(mins) ', (time() - st) / 60)
 
         cnt = 0
 
@@ -150,9 +146,12 @@ def collect_data(agent, collector, max_moves=1e9):
     count = 0
 
     while state.can_play() and count < max_moves:
-            
+
         if state.can_play():
+        
+            st = time()
             move = agent.select_move(state)
+            logger.debug(f"{(time() - st) / 60} mins per move.")
 
             collector.add(state.to_numpy(), int(move))
 
@@ -175,17 +174,26 @@ def collect_data(agent, collector, max_moves=1e9):
     
 
 if __name__ == '__main__':
+    import os
+    
     agent = MonteCarloAgent(2)  
     collector = Collector()
 
     collector_epoch = 0
+
+    for file in os.listdir('./data'):
+        name = file.split('.')[0]
+        num = int(name.split('_')[-1])
+        collector_epoch = max(collector_epoch, num)
+    
+    collector_epoch += 1
 
     for i in range(1):  
         logger.info(f'starting epoch #{i}')
 
         collect_data(agent, collector)
         
-        collector.serialize(f'./data/games_{i}.h5')
+        collector.serialize(f'./data/games_{collector_epoch}.h5')
 
         del collector 
         collector = Collector()

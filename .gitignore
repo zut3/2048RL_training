@@ -1,4 +1,10 @@
+__init__.py
 __pycache__
 venv
 data/*
 collect.log
+*.pt
+main.py
+tree.py
+data
+experements

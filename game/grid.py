@@ -3,12 +3,12 @@ from enum import Enum
 
 
 def stack(matrix):
-    new = np.zeros_like(matrix)
+    new = np.ones_like(matrix)
 
     for i in range(matrix.shape[0]):
         pos = 0
         for j in range(matrix.shape[1]):
-            if matrix[i, j] == 0:
+            if matrix[i, j] == 1:
                 continue
             
             new[i, pos] = matrix[i, j]
@@ -19,9 +19,9 @@ def combine(matrix):
     score = 0
     for i in range(matrix.shape[0]):
         for j in range(matrix.shape[1] - 1):
-            if(matrix[i, j] == matrix[i, j+1] and matrix[i, j] != 0):
+            if(matrix[i, j] == matrix[i, j+1] and matrix[i, j] != 1):
                 matrix[i, j] = 2 * matrix[i, j]
-                matrix[i, j+1] = 0
+                matrix[i, j+1] = 1
                 score += 2 * matrix[i, j].astype(np.int32)
     
     return matrix, score
@@ -32,7 +32,7 @@ class Grid(object):
     def __init__(self, w, h):
         self.weight = w
         self.height = h
-        self._grid = np.zeros((w, h))
+        self._grid = np.ones((w, h))
         self.score = 0
 
     @staticmethod
@@ -63,7 +63,7 @@ class Grid(object):
         self._grid = self._grid.T
     
     def spawn(self, x, y):
-        if self._grid[x, y] != 0:
+        if self._grid[x, y] != 1:
             raise Exception('trying to spawn in not empty cell')
         
         self._grid[x, y] = 2
@@ -76,7 +76,7 @@ class Grid(object):
             s, _ = combine(s)
             s = stack(s)
 
-            return np.sum(s == 0) == 0
+            return np.sum(s == 1) == 0
         
         return _all_filled(copy) and _all_filled(np.fliplr(copy)) \
                 and _all_filled(copy.T) and _all_filled(np.fliplr(copy.T))
@@ -88,7 +88,7 @@ class Grid(object):
         return (not self.is_lose()) and (not self.is_win())
     
     def have_empty(self) -> bool:
-        return np.sum(self._grid == 0) > 0
+        return np.sum(self._grid == 1) > 0
     
     def __repr__(self) -> str:
         return str(self._grid.astype(np.int32))
@@ -98,7 +98,7 @@ class Grid(object):
 if __name__ == '__main__':
     print('===testing grid 5x5===')
     grid = Grid(5, 5)
-    grid.spawn()
+    grid.spawn(0, 0)
     print(grid, end='\n\n')
     grid.move_left()
     print(grid, end='\n\n')
